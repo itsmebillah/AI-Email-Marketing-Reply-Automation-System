@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <base target="_top">
+
+  <style>
+
+    body {
+
+      font-family: Arial;
+      padding: 15px;
+      background: #f5f7fb;
+
+    }
+
+    .card {
+
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+
+      box-shadow:
+        0 2px 5px rgba(
+          0,
+          0,
+          0,
+          .1
+        );
+
+    }
+
+    .kpi {
+
+      font-size: 24px;
+      font-weight: bold;
+
+    }
+
+    button {
+
+      background: #4285f4;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin-right: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+
+    }
+
+    table {
+
+      width: 100%;
+      border-collapse: collapse;
+
+    }
+
+    th,
+    td {
+
+      border: 1px solid #ddd;
+      padding: 8px;
+
+    }
+
+    th {
+
+      background: #4285f4;
+      color: white;
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<h2>📊 AI Email Dashboard</h2>
+
+<div class="card">
+  <div>Total Leads</div>
+  <div id="totalLeads" class="kpi">0</div>
+</div>
+
+<div class="card">
+  <div>New Leads</div>
+  <div id="newLeads" class="kpi">0</div>
+</div>
+
+<div class="card">
+  <div>Emails Sent</div>
+  <div id="emailsSent" class="kpi">0</div>
+</div>
+
+<div class="card">
+  <div>Replies</div>
+  <div id="replies" class="kpi">0</div>
+</div>
+
+<div class="card">
+  <div>AI Replies</div>
+  <div id="aiReplies" class="kpi">0</div>
+</div>
+
+<div class="card">
+  <div>Human Reviews</div>
+  <div id="humanReviews" class="kpi">0</div>
+</div>
+
+<br>
+
+<button onclick="sendAll()">
+📧 Send New Leads
+</button>
+
+<button onclick="checkReplies()">
+📨 Check Replies
+</button>
+
+<button onclick="runFollowups()">
+🔄 Followups
+</button>
+
+<hr>
+
+<h3>Pending Human Reviews</h3>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Date</th>
+<th>Customer</th>
+<th>Email</th>
+<th>Reason</th>
+<th>Status</th>
+
+</tr>
+
+</thead>
+
+<tbody id="reviewTable">
+
+</tbody>
+
+</table>
+
+<script>
+
+loadDashboard();
+
+function loadDashboard() {
+
+  google.script.run
+    .withSuccessHandler(
+      renderStats
+    )
+    .getDashboardStats();
+
+  google.script.run
+    .withSuccessHandler(
+      renderReviews
+    )
+    .getDashboardReviews();
+
+}
+
+function renderStats(
+  data
+) {
+
+  document
+    .getElementById(
+      "totalLeads"
+    ).innerText =
+    data.totalLeads;
+
+  document
+    .getElementById(
+      "newLeads"
+    ).innerText =
+    data.newLeads;
+
+  document
+    .getElementById(
+      "emailsSent"
+    ).innerText =
+    data.emailsSent;
+
+  document
+    .getElementById(
+      "replies"
+    ).innerText =
+    data.replies;
+
+  document
+    .getElementById(
+      "aiReplies"
+    ).innerText =
+    data.aiReplies;
+
+  document
+    .getElementById(
+      "humanReviews"
+    ).innerText =
+    data.humanReviews;
+
+}
+
+function renderReviews(
+  rows
+) {
+
+  let html = "";
+
+  rows.forEach(r => {
+
+    html += `
+      <tr>
+        <td>${r["Date"]}</td>
+        <td>${r["Customer"]}</td>
+        <td>${r["Email"]}</td>
+        <td>${r["Reason"]}</td>
+        <td>${r["Status"]}</td>
+      </tr>
+    `;
+
+  });
+
+  document
+    .getElementById(
+      "reviewTable"
+    )
+    .innerHTML = html;
+
+}
+
+function sendAll() {
+
+  google.script.run
+    .processNewLeads();
+
+}
+
+function checkReplies() {
+
+  google.script.run
+    .checkReplies();
+
+}
+
+function runFollowups() {
+
+  google.script.run
+    .runFollowups();
+
+}
+
+</script>
+
+</body>
+</html>
