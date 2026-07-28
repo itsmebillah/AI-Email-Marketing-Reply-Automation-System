@@ -53,6 +53,11 @@ class SettingsService {
 
     }
 
+    sheet.appendRow([
+      key,
+      value
+    ]);
+
   }
 
 }

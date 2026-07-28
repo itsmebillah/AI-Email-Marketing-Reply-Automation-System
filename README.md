@@ -1,6 +1,15 @@
-# Mail Automation
+# AI Email Automation
 
 Google Apps Script project for spreadsheet-driven outbound email automation, AI-assisted reply handling, follow-ups, and lightweight dashboard reporting.
+
+![AI Email Automation social preview](assets/social-preview/ai-email-automation-social-preview.png)
+
+[![Status](https://img.shields.io/badge/status-active-15803d?style=flat-square)](#known-limitations)
+[![Runtime](https://img.shields.io/badge/runtime-Apps%20Script%20V8-111827?style=flat-square)](appsscript.json)
+[![Platform](https://img.shields.io/badge/platform-Gmail%20%2B%20Sheets-0f766e?style=flat-square)](#architecture)
+[![AI](https://img.shields.io/badge/AI-Groq-b45309?style=flat-square)](#configuration)
+
+[Architecture](DEPENDENCY_DIAGRAM.md) | [Deployment Guide](DEPLOYMENT_GUIDE.md) | [Configuration](#configuration) | [Security](SECURITY.md) | [Portfolio](https://itsmebillah.github.io/)
 
 ## Overview
 
@@ -229,15 +238,9 @@ clasp push
 
 This creates the required sheets and headers.
 
-### Important setup note
+### Safe repeated setup
 
-`setupProject()` calls `setupSettings()`, but that function is not present in the current repository. Because of that, sheet creation works only up to the point where the missing function is invoked.
-
-Recommended options:
-
-- add a `setupSettings()` function before first-time setup, or
-- comment out that call temporarily and populate the `Settings` sheet manually, or
-- run `setupProject()`, then manually finish the `Settings` sheet if execution stops after sheet creation
+`setupProject()` creates missing sheets, adds headers only to empty sheets, and appends any missing default setting keys. It does not clear existing leads, templates, logs, or configuration when run again. Credential values are created as empty fields and must be configured explicitly.
 
 ## Configuration
 
@@ -436,9 +439,7 @@ It also exposes buttons for:
 
 ### `setupProject()` fails
 
-Cause: `setupSettings()` is referenced but not implemented in this repository.
-
-Fix: add the missing function or manually populate the `Settings` sheet.
+Check that the script is bound to a spreadsheet and that the executing account can create and update sheets. Existing non-empty sheets are preserved; confirm their headers match the documented data model.
 
 ### No emails are sent
 
@@ -488,8 +489,25 @@ Recommendations:
 
 ## Suggested Next Improvements
 
-- implement `setupSettings()` with default configuration rows
 - move secrets out of the spreadsheet
 - add input validation and API response checks
 - escape dashboard HTML output instead of writing raw `innerHTML`
 - add a proper manual review action flow instead of a passive log sheet
+
+## Known Limitations
+
+- Automated tests are not yet included; verification requires an Apps Script development project and test spreadsheet.
+- Credential values are still read from the `Settings` sheet and should move to `PropertiesService` before production use.
+- The sidebar dashboard renders values with `innerHTML` and needs explicit escaping for untrusted content.
+- Human review is logged and alerted but does not yet provide an approval action workflow.
+- The project has no public live demo because it requires authorized Gmail and spreadsheet access.
+
+## Contributing and License
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) before changing email, AI, credential, or alert behavior. No open-source license is currently declared; the source is publicly visible, but reuse rights are not granted until a license is added by the repository owner.
+
+---
+
+**Md. Masum Billah** | Data Analyst, Automation Developer, and Business Intelligence Specialist
+
+[Portfolio](https://itsmebillah.github.io/) | [GitHub](https://github.com/itsmebillah) | [Email](mailto:itsmbillah@gmail.com) | [Documentation](DEPLOYMENT_GUIDE.md) | [Related: Sales Intelligence Platform](https://github.com/itsmebillah/Sales-Dashboard)
