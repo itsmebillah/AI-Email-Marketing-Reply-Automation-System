@@ -4,8 +4,12 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
-const config = {SHEETS: {KNOWLEDGE: 'KnowledgeBase', SETTINGS: 'Settings', HUMAN_REVIEW: 'HumanReview'}};
-const review = {'Review ID': 'REPLY:synthetic'};
+const config = {SHEETS: {KNOWLEDGE: 'KnowledgeBase', SETTINGS: 'Settings', HUMAN_REVIEW: 'HumanReview', LEADS: 'Leads'}};
+const review = {
+  'Review ID': 'REPLY:synthetic', 'Lead ID': 'L1', Customer: 'Sample Customer',
+  Subject: 'Product pricing', Reason: 'Priority: bulk quote',
+  Message: 'Can you send a bulk quote? Reply to buyer@example.test.\n\nOn Thursday Someone wrote:\n> Old message.'
+};
 const sheets = {
   KnowledgeBase: [
     {Category: 'Product', Content: 'Synthetic product', 'Review Keywords': 'Refund, bulk quote; দাম'},
@@ -19,7 +23,8 @@ const sheets = {
     {Key: 'TWILIO_TO', Value: '+15550123457'},
     {Key: 'TWILIO_CONTENT_SID', Value: 'HX' + '0'.repeat(32)}
   ],
-  HumanReview: [review]
+  HumanReview: [review],
+  Leads: [{'Lead ID': 'L1', Company: 'Sample Company'}]
 };
 const props = {
   TELEGRAM_BOT_TOKEN: '123456:synthetic',
@@ -69,8 +74,15 @@ assert.equal(review['WhatsApp Alert'], 'ACCEPTED');
 assert.equal(review['Telegram Alert'], 'ACCEPTED');
 assert.match(calls[0].options.payload.ContentSid, /^HX/);
 assert.equal(calls[0].options.payload.Body, undefined);
-assert.match(JSON.parse(calls[1].options.payload).text, /priority customer reply/);
-assert.equal(JSON.parse(calls[1].options.payload).text.includes('REPLY:synthetic'), false);
+const telegram = JSON.parse(calls[1].options.payload);
+assert.match(telegram.text, /Priority customer reply/);
+assert.match(telegram.text, /Customer: Sample Customer/);
+assert.match(telegram.text, /Company: Sample Company/);
+assert.match(telegram.text, /Subject: Product pricing/);
+assert.match(telegram.text, /Review keywords: bulk quote/);
+assert.match(telegram.text, /Customer reply: Can you send a bulk quote\?/);
+assert.doesNotMatch(telegram.text, /REPLY:synthetic|buyer@example\.test|Old message/);
+assert.equal(telegram.link_preview_options.is_disabled, true);
 
 sheets.HumanReview.push({'Review ID':'REPLY:disabled'});
 sheets.Settings.find(row => row.Key === 'TELEGRAM_ENABLED').Value = false;
