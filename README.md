@@ -1,6 +1,6 @@
 # AI Email Automation
 
-A Google Sheets and Apps Script workflow for preparing outreach, triaging Gmail replies, approving drafts, and scheduling follow-up reviews. The reviewer approves individual sends from a private workbook.
+A Google Sheets and Apps Script workflow for preparing outreach, triaging Gmail replies, approving drafts, and scheduling follow-up reviews. Initial outreach and priority reviews use approval. Eligible non-keyword replies can be sent automatically from a private workbook.
 
 ![AI Email Automation preview](assets/social-preview/ai-email-automation-social-preview.png)
 

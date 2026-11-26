@@ -14,6 +14,7 @@ function prepareEmailSettings() {
     EmailPolicy.requirePrivateWorkbook();
     EmailPolicy.installSendingControl(false);
     installReviewRouting_();
+    AutoReplies.install();
     sortEmailSettings_();
   });
 }
@@ -80,6 +81,7 @@ function initializeEmailReviewer() {
     const email = EmailPolicy.email(Session.getActiveUser().getEmail());
     EmailPolicy.installSendingControl(true);
     installReviewRouting_();
+    AutoReplies.install();
     sortEmailSettings_();
     PropertiesService.getScriptProperties().setProperty('REVIEWER_EMAIL', email);
     installEmailTriggers_();

@@ -10,12 +10,16 @@ Use a dedicated Gmail account and a private Sheet. Distribute a clean template w
 
 ## Keyword rules and alerts
 
-Use **KnowledgeBase → Review Keywords**. Enter words or phrases separated by commas, semicolons, or line breaks. They apply across the workbook. Matching is case-insensitive and uses whole words or phrases in the new reply body. Matches go to priority review without asking AI for a draft. Other eligible replies still require human approval.
+Use **KnowledgeBase → Review Keywords**. Enter words or phrases separated by commas, semicolons, or line breaks. They apply across the workbook. Matching is case-insensitive and uses whole words or phrases in the new reply body. Matches go to priority review without asking AI for a draft. Eligible unmatched replies use AUTO_REPLY_ENABLED and EMAIL_SEND_ENABLED to send a validated draft in the original thread. When AI returns `other` with an empty draft, the system asks for more detail using a standard reply. AILogs records each routing outcome.
 
 - **Telegram:** Enable TELEGRAM_ENABLED. Put TELEGRAM_CHAT_ID in Settings and TELEGRAM_BOT_TOKEN in Script Properties.
 - **WhatsApp:** Enable WHATSAPP_ENABLED. Configure TWILIO_SID, TWILIO_FROM and TWILIO_TO in Settings, and TWILIO_TOKEN in Script Properties. Use TWILIO_CONTENT_SID for an approved static WhatsApp notification template outside the 24-hour service window. [Twilio guide](https://www.twilio.com/docs/whatsapp/tutorial/send-whatsapp-notification-messages-templates)
 
 Review notifications omit customer identity and email content. HumanReview records acceptance or failures for each channel. An uncertain attempt is not retried automatically.
+
+### Enable automatic replies
+
+After the one-time Settings setup, opt in by checking AUTO_REPLY_ENABLED and EMAIL_SEND_ENABLED. Enable AI with a configured model and key, and use Check replies or Schedule automation. The upgrade resets the old inactive AUTO_REPLY_ENABLED setting to off once per workbook. Older replies already processed are not replayed.
 
 ## Test and recover
 

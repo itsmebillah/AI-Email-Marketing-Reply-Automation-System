@@ -1,6 +1,6 @@
 # Security
 
-Keep the workbook restricted. The mailbox owner approves individual sends. Leave sending paused until a controlled test passes.
+Keep the workbook restricted. The mailbox owner approves initial outreach and any priority replies. The owner controls auto replies for eligible non-keyword messages. Leave sending paused until a controlled test passes.
 
 Keep tokens and API keys in Script Properties. Restrict script editor access and rotate exposed credentials. Keep distribution copies free of real leads, message IDs, logs, and secrets.
 
