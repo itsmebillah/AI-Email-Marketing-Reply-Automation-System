@@ -1,17 +1,9 @@
-# Security Policy
+# Security
 
-## Sensitive Data
+Keep the workbook restricted. The mailbox owner approves individual sends. Leave sending paused until a controlled test passes.
 
-This project can access Gmail threads, customer messages, spreadsheet records, Groq, Telegram, and Twilio. Never commit API keys, bot tokens, account credentials, message exports, or real lead data.
+Keep tokens and API keys in Script Properties. Restrict script editor access and rotate exposed credentials. Keep distribution copies free of real leads, message IDs, logs, and secrets.
 
-The current implementation supports sheet-based configuration for compatibility. Restrict spreadsheet editor access and migrate credentials to Apps Script `PropertiesService` before production use.
+Incoming email is untrusted. Keyword matching precedes AI draft generation. Optional alerts omit customer identity and message content. The selected AI provider only receives capped excerpts of a reply and the buyer's knowledge when AI drafting is enabled.
 
-## Safe Operation
-
-- Keep `AUTO_REPLY_ENABLED` disabled until prompts and outputs are tested.
-- Use least-privilege Apps Script scopes and a dedicated development spreadsheet.
-- Review customer content before forwarding it to third-party alert services.
-- Rotate any credential exposed in execution logs, spreadsheets, screenshots, or commits.
-- Treat `createTriggers()` carefully because it replaces all triggers owned by this project.
-
-Report vulnerabilities privately to [itsmbillah@gmail.com](mailto:itsmbillah@gmail.com) rather than opening a public issue with sensitive details.
+Report vulnerabilities privately to the repository owner.

@@ -1,144 +1,29 @@
 class FollowupService {
-
   static run() {
-
-    const template =
-      TemplateService.getTemplate(
-        "TMP002"
-      );
-
-    if (!template) return;
-
-    const leads =
-      SheetService.getRows(
-        CONFIG.SHEETS.LEADS
-      );
-
-    const today =
-      new Date();
-
-    leads.forEach(lead => {
-
-      const status =
-        lead["Status"];
-
-      if (
-        status ===
-        CONFIG.STATUS.HUMAN_REVIEW
-      ) {
-        return;
+    if (!SettingsService.enabled('FOLLOWUP_QUEUE_ENABLED')) return 0;
+    const template = TemplateService.getTemplate('TMP002');
+    if (!template) return 0;
+    const queue = HumanReviewService.index();
+    const now = new Date();
+    let created = 0;
+    for (const lead of SheetService.getRows(CONFIG.SHEETS.LEADS)) {
+      if (created >= 10) break;
+      if (!EmailPolicy.canFollowUp(lead, now)) continue;
+      const id = String(lead['Lead ID'] || '').trim();
+      const email = EmailPolicy.email(lead.Email);
+      const key = 'FOLLOWUP:' + id + ':' + Number(lead['Follow-up Count'] || 0);
+      if (!id || !email || queue.has(key) || EmailPolicy.suppressed(email)) continue;
+      let thread;
+      try {
+        thread = GmailService.inspect(lead);
+      } catch (_) {
+        continue;
       }
-
-      const followupDate =
-        lead["Follow-up Date"];
-
-      if (!followupDate)
-        return;
-
-      const dueDate =
-        new Date(
-          followupDate
-        );
-
-      if (
-        dueDate <= today
-      ) {
-
-        GmailService.sendFollowup(
-          lead,
-          template
-        );
-
-        this.updateLead(
-          lead
-        );
-
-      }
-
-    });
-
-  }
-
-  static updateLead(
-    lead
-  ) {
-
-    const sheet =
-      SheetService.getSheet(
-        CONFIG.SHEETS.LEADS
-      );
-
-    const data =
-      sheet.getDataRange()
-      .getValues();
-
-    const headers =
-      data[0];
-
-    const leadIdCol =
-      headers.indexOf(
-        "Lead ID"
-      );
-
-    const countCol =
-      headers.indexOf(
-        "Follow-up Count"
-      );
-
-    const dateCol =
-      headers.indexOf(
-        "Follow-up Date"
-      );
-
-    for (
-      let i = 1;
-      i < data.length;
-      i++
-    ) {
-
-      if (
-        data[i][leadIdCol] ==
-        lead["Lead ID"]
-      ) {
-
-        let count =
-          Number(
-            data[i][countCol]
-          ) || 0;
-
-        count++;
-
-        sheet
-          .getRange(
-            i + 1,
-            countCol + 1
-          )
-          .setValue(
-            count
-          );
-
-        const nextDate =
-          new Date();
-
-        nextDate.setDate(
-          nextDate.getDate() + 7
-        );
-
-        sheet
-          .getRange(
-            i + 1,
-            dateCol + 1
-          )
-          .setValue(
-            nextDate
-          );
-
-        break;
-
-      }
-
+      if (thread.inbound.length || thread.hasUnrecognizedSender) continue;
+      HumanReviewService.enqueue(lead, key, 'FOLLOWUP', 'Scheduled follow-up',
+        GmailService.render(template.Body, lead), thread.anchor.getSubject(), thread.anchor.getId());
+      created++;
     }
-
+    return created;
   }
-
 }

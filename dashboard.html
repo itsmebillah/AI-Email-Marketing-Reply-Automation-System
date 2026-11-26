@@ -1,268 +1,235 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-
 <head>
-
-  <base target="_top">
-
-  <style>
-
-    body {
-
-      font-family: Arial;
-      padding: 15px;
-      background: #f5f7fb;
-
-    }
-
-    .card {
-
-      background: white;
-      padding: 15px;
-      margin-bottom: 10px;
-      border-radius: 10px;
-
-      box-shadow:
-        0 2px 5px rgba(
-          0,
-          0,
-          0,
-          .1
-        );
-
-    }
-
-    .kpi {
-
-      font-size: 24px;
-      font-weight: bold;
-
-    }
-
-    button {
-
-      background: #4285f4;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      margin-right: 10px;
-      border-radius: 5px;
-      cursor: pointer;
-
-    }
-
-    table {
-
-      width: 100%;
-      border-collapse: collapse;
-
-    }
-
-    th,
-    td {
-
-      border: 1px solid #ddd;
-      padding: 8px;
-
-    }
-
-    th {
-
-      background: #4285f4;
-      color: white;
-
-    }
-
-  </style>
-
+<base target="_top">
+<style>
+:root{color-scheme:light;font:13px Arial,sans-serif;color:#1d3642}
+body{margin:0;background:#f3f7f8;padding:14px}
+h1{font-size:20px;margin:0 0 8px}h2{font-size:15px;margin:0 0 6px}
+p{margin:7px 0;overflow-wrap:anywhere}button,textarea,input,select{font:inherit}
+details.ai{background:#fff;border:1px solid #cedde0;border-radius:8px;padding:10px;margin:10px 0}
+details.ai summary{cursor:pointer;font-weight:bold}
+#ai-form label{display:block;margin:10px 0 6px;font-weight:bold}
+#ai-form input,#ai-form select{box-sizing:border-box;width:100%;padding:7px;border:1px solid #9eb5bb;border-radius:5px;background:white}
+#ai-form button{margin-top:10px}
+#setup{margin:10px 0}
+button{padding:7px 10px;border:1px solid #9eb5bb;border-radius:6px;background:white;color:#173840;cursor:pointer}
+button.primary{background:#21665e;color:white;border-color:#21665e}button:disabled{opacity:.55;cursor:default}
+button:focus-visible,textarea:focus-visible{outline:2px solid #21665e;outline-offset:2px}
+article{background:white;border:1px solid #cedde0;border-radius:9px;padding:11px;margin:10px 0}
+textarea{box-sizing:border-box;width:100%;min-height:100px;resize:vertical;border:1px solid #9eb5bb;border-radius:5px;padding:7px}
+.actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.message{white-space:pre-wrap;max-height:180px;overflow:auto}
+#status{min-height:2em}.muted{color:#425c65}
+</style>
 </head>
-
 <body>
-
-<h2>📊 AI Email Dashboard</h2>
-
-<div class="card">
-  <div>Total Leads</div>
-  <div id="totalLeads" class="kpi">0</div>
+<h1>Email review</h1>
+<p id="summary" class="muted"></p>
+<div id="setup" hidden>
+  <p id="setup-instructions"></p>
+  <button id="use-account" type="button" hidden>Use my account as reviewer</button>
 </div>
-
-<div class="card">
-  <div>New Leads</div>
-  <div id="newLeads" class="kpi">0</div>
-</div>
-
-<div class="card">
-  <div>Emails Sent</div>
-  <div id="emailsSent" class="kpi">0</div>
-</div>
-
-<div class="card">
-  <div>Replies</div>
-  <div id="replies" class="kpi">0</div>
-</div>
-
-<div class="card">
-  <div>AI Replies</div>
-  <div id="aiReplies" class="kpi">0</div>
-</div>
-
-<div class="card">
-  <div>Human Reviews</div>
-  <div id="humanReviews" class="kpi">0</div>
-</div>
-
-<br>
-
-<button onclick="sendAll()">
-📧 Send New Leads
-</button>
-
-<button onclick="checkReplies()">
-📨 Check Replies
-</button>
-
-<button onclick="runFollowups()">
-🔄 Followups
-</button>
-
-<hr>
-
-<h3>Pending Human Reviews</h3>
-
-<table>
-
-<thead>
-
-<tr>
-
-<th>Date</th>
-<th>Customer</th>
-<th>Email</th>
-<th>Reason</th>
-<th>Status</th>
-
-</tr>
-
-</thead>
-
-<tbody id="reviewTable">
-
-</tbody>
-
-</table>
-
+<details class="ai" id="ai-settings" hidden>
+  <summary>AI settings</summary>
+  <form id="ai-form">
+    <label for="ai-provider">Provider</label>
+    <select id="ai-provider" required></select>
+    <label id="ai-model-label" for="ai-model">Model ID</label>
+    <input id="ai-model" type="text" required maxlength="180" spellcheck="false" autocomplete="off">
+    <label id="ai-key-label" for="ai-key">API key</label>
+    <input id="ai-key" type="password" autocomplete="new-password" maxlength="1000">
+    <p id="ai-key-state" class="muted"></p>
+    <button id="ai-save" type="submit" class="primary">Save AI settings</button>
+    <p id="ai-status" role="status"></p>
+  </form>
+</details>
+<button id="refresh" type="button" hidden>Refresh</button>
+<p id="status" role="status" aria-live="polite"></p>
+<section id="queue" aria-label="Email queue"></section>
 <script>
+const statusText = document.getElementById('status');
+const queue = document.getElementById('queue');
+const refresh = document.getElementById('refresh');
+const summary = document.getElementById('summary');
 
-loadDashboard();
-
-function loadDashboard() {
-
-  google.script.run
-    .withSuccessHandler(
-      renderStats
-    )
-    .getDashboardStats();
-
-  google.script.run
-    .withSuccessHandler(
-      renderReviews
-    )
-    .getDashboardReviews();
-
+function text(tag, value, className) {
+  const element = document.createElement(tag);
+  element.textContent = value;
+  if (className) element.className = className;
+  return element;
 }
 
-function renderStats(
-  data
-) {
-
-  document
-    .getElementById(
-      "totalLeads"
-    ).innerText =
-    data.totalLeads;
-
-  document
-    .getElementById(
-      "newLeads"
-    ).innerText =
-    data.newLeads;
-
-  document
-    .getElementById(
-      "emailsSent"
-    ).innerText =
-    data.emailsSent;
-
-  document
-    .getElementById(
-      "replies"
-    ).innerText =
-    data.replies;
-
-  document
-    .getElementById(
-      "aiReplies"
-    ).innerText =
-    data.aiReplies;
-
-  document
-    .getElementById(
-      "humanReviews"
-    ).innerText =
-    data.humanReviews;
-
+function load(message) {
+  refresh.disabled = true;
+  statusText.textContent = message || 'Loading review queue…';
+  google.script.run.withSuccessHandler(data => {
+    refresh.disabled = false;
+    summary.textContent = data.pending + ' pending · ' + data.confirmed + ' sent · ' +
+      data.unresolved + ' need reconciliation' + (data.sendEnabled ? '' : ' · Sending paused');
+    queue.replaceChildren(...data.items.map(item => render(item, data.sendEnabled)));
+    statusText.textContent = message || (data.items.length ? '' : 'No reviews to show.');
+  }).withFailureHandler(error => {
+    refresh.disabled = false;
+    statusText.textContent = error.message || 'Could not load the queue.';
+  }).getDashboard();
 }
 
-function renderReviews(
-  rows
-) {
+function render(item, sendEnabled) {
+  const card = document.createElement('article');
+  card.append(text('h2', item.subject || item.kind),
+    text('p', (item.customer ? item.customer + ' · ' : '') + item.email),
+    text('p', item.kind + ' · ' + item.status + ' · ' + item.reason, 'muted'));
+  if (item.message) {
+    const details = document.createElement('details');
+    details.append(text('summary', 'Incoming message'), text('p', item.message, 'message'));
+    card.append(details);
+  }
+  if (item.status !== 'PENDING') {
+    card.append(text('p', 'Check Gmail Sent and the review record before sending again.'));
+    return card;
+  }
+  const label = text('label', 'Reply draft');
+  const draft = document.createElement('textarea');
+  draft.maxLength = 10000;
+  draft.value = item.draft;
+  label.append(draft);
+  const controls = document.createElement('div');
+  controls.className = 'actions';
+  for (const [caption, action] of [
+    ['Save draft', 'SAVE'], ['Approve & send', 'SEND'], ['Reject', 'REJECT'], ['Mark resolved', 'RESOLVE']
+  ]) {
+    const button = text('button', caption, action === 'SEND' ? 'primary' : '');
+    button.type = 'button';
+    button.disabled = action === 'SEND' && !sendEnabled;
+    button.addEventListener('click', () => {
+      if (action === 'SEND' && !confirm('Send this message to ' + item.email + '?')) return;
+      const buttons = [...controls.querySelectorAll('button')];
+      buttons.forEach(control => { control.disabled = true; });
+      statusText.textContent = 'Saving…';
+      google.script.run.withSuccessHandler(load).withFailureHandler(error => {
+        statusText.textContent = error.message || 'The action failed.';
+        buttons.forEach((control, index) => { control.disabled = index === 1 && !sendEnabled; });
+      }).reviewEmail({id: item.id, revision: item.revision, action, draft: draft.value});
+    });
+    controls.append(button);
+  }
+  card.append(label, controls);
+  return card;
+}
+const setupPanel = document.getElementById('setup');
+const setupInstructions = document.getElementById('setup-instructions');
+const useAccount = document.getElementById('use-account');
+const aiSettings = document.getElementById('ai-settings');
+const aiForm = document.getElementById('ai-form');
+const aiProvider = document.getElementById('ai-provider');
+const aiModel = document.getElementById('ai-model');
+const aiKey = document.getElementById('ai-key');
+const aiKeyState = document.getElementById('ai-key-state');
+const aiStatus = document.getElementById('ai-status');
+const aiSave = document.getElementById('ai-save');
+let providerOptions = [];
+let settingsLoaded = false;
 
-  let html = "";
-
-  rows.forEach(r => {
-
-    html += `
-      <tr>
-        <td>${r["Date"]}</td>
-        <td>${r["Customer"]}</td>
-        <td>${r["Email"]}</td>
-        <td>${r["Reason"]}</td>
-        <td>${r["Status"]}</td>
-      </tr>
-    `;
-
-  });
-
-  document
-    .getElementById(
-      "reviewTable"
-    )
-    .innerHTML = html;
-
+function startReview() {
+  setupPanel.hidden = true;
+  aiSettings.hidden = false;
+  refresh.hidden = false;
+  load();
 }
 
-function sendAll() {
-
-  google.script.run
-    .processNewLeads();
-
+function checkAccess() {
+  statusText.textContent = 'Checking review access…';
+  google.script.run.withSuccessHandler(access => {
+    statusText.textContent = '';
+    if (access.ready) {
+      startReview();
+      return;
+    }
+    setupPanel.hidden = false;
+    useAccount.hidden = !access.canInitialize;
+    if (access.isConfigured) {
+      setupInstructions.textContent = 'Open this sheet with the Gmail account designated as reviewer.';
+    } else if (access.canInitialize) {
+      setupInstructions.textContent = 'Set Share → General access to Restricted, then use your signed-in account as reviewer.';
+    } else {
+      setupInstructions.textContent = 'Ask the spreadsheet owner to open Review queue and set up the reviewer. If necessary, the owner can set REVIEWER_EMAIL in Apps Script → Project Settings → Script Properties.';
+    }
+  }).withFailureHandler(error => {
+    statusText.textContent = error.message || 'Could not check review access.';
+  }).getEmailReviewAccess();
 }
 
-function checkReplies() {
+useAccount.addEventListener('click', () => {
+  useAccount.disabled = true;
+  google.script.run.withSuccessHandler(startReview).withFailureHandler(error => {
+    useAccount.disabled = false;
+    statusText.textContent = error.message || 'Could not set up the reviewer.';
+  }).initializeEmailReviewer();
+});
 
-  google.script.run
-    .checkReplies();
-
+function describeKey() {
+  const option = providerOptions.find(provider => provider.id === aiProvider.value);
+  const providerName = option?.label || '';
+  document.getElementById('ai-model-label').textContent = providerName ? providerName + ' Model ID' : 'Model ID';
+  document.getElementById('ai-key-label').textContent = providerName ? providerName + ' API key' : 'API key';
+  aiKey.required = !option?.hasKey;
+  aiKeyState.textContent = option?.hasKey
+    ? 'A ' + providerName + ' key is saved. Leave blank to keep it.'
+    : providerName ? 'Enter your ' + providerName + ' API key. It is saved in Script Properties.'
+      : 'Select a provider first.';
 }
 
-function runFollowups() {
-
-  google.script.run
-    .runFollowups();
-
+function showAiSettings(data) {
+  providerOptions = data.providers;
+  aiProvider.replaceChildren(...providerOptions.map(provider => {
+    const option = text('option', provider.label);
+    option.value = provider.id;
+    return option;
+  }));
+  aiProvider.value = data.provider;
+  aiModel.value = data.model;
+  aiKey.value = '';
+  describeKey();
+  settingsLoaded = true;
+  aiSave.disabled = false;
 }
 
+aiSettings.addEventListener('toggle', () => {
+  if (!aiSettings.open || settingsLoaded) return;
+  aiSave.disabled = true;
+  aiStatus.textContent = 'Loading AI settings…';
+  google.script.run.withSuccessHandler(data => {
+    showAiSettings(data);
+    aiStatus.textContent = '';
+  }).withFailureHandler(error => {
+    aiStatus.textContent = error.message || 'Could not load AI settings.';
+  }).getEmailAiSettings();
+});
+
+aiProvider.addEventListener('change', () => {
+  aiModel.value = '';
+  aiKey.value = '';
+  describeKey();
+});
+
+aiForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const config = {provider: aiProvider.value, model: aiModel.value, apiKey: aiKey.value};
+  aiKey.value = '';
+  aiSave.disabled = true;
+  aiStatus.textContent = 'Saving…';
+  google.script.run.withSuccessHandler(data => {
+    showAiSettings(data);
+    aiStatus.textContent = 'Saved. New replies can use this provider to prepare drafts.';
+  }).withFailureHandler(error => {
+    aiSave.disabled = false;
+    aiStatus.textContent = error.message || 'Could not save AI settings.';
+  }).saveEmailAiSettings(config);
+});
+
+refresh.addEventListener('click', () => load());
+checkAccess();
 </script>
-
 </body>
 </html>

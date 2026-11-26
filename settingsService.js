@@ -1,63 +1,11 @@
 class SettingsService {
-
   static get(key) {
-
-    const sheet =
-      SheetService.getSheet(
-        CONFIG.SHEETS.SETTINGS
-      );
-
-    const data =
-      sheet.getDataRange()
-      .getValues();
-
-    for (let i = 1; i < data.length; i++) {
-
-      if (data[i][0] == key) {
-
-        return data[i][1];
-
-      }
-
-    }
-
-    return null;
-
+    const rows = SheetService.getRows(CONFIG.SHEETS.SETTINGS);
+    const matches = rows.filter(row => String(row.Key || '').trim() === key);
+    return matches.length === 1 ? matches[0].Value : null;
   }
 
-  static set(
-    key,
-    value
-  ) {
-
-    const sheet =
-      SheetService.getSheet(
-        CONFIG.SHEETS.SETTINGS
-      );
-
-    const data =
-      sheet.getDataRange()
-      .getValues();
-
-    for (let i = 1; i < data.length; i++) {
-
-      if (data[i][0] == key) {
-
-        sheet
-          .getRange(i + 1, 2)
-          .setValue(value);
-
-        return;
-
-      }
-
-    }
-
-    sheet.appendRow([
-      key,
-      value
-    ]);
-
+  static enabled(key) {
+    return String(this.get(key)).trim().toLowerCase() === 'true';
   }
-
 }

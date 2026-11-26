@@ -1,164 +1,48 @@
+const EMAIL_SCHEMA = {
+  Leads: ['Lead ID', 'Name', 'Email', 'Company', 'Status', 'Send', 'Thread ID',
+    'Last Sent', 'Follow-up Date', 'Follow-up Count', 'Initial Message ID'],
+  Templates: ['Template ID', 'Template Name', 'Subject', 'Body'],
+  KnowledgeBase: ['Category', 'Content', 'Review Keywords'],
+  EmailLogs: ['Log ID', 'Lead ID', 'Thread ID', 'Subject', 'Sent Date', 'Type'],
+  AILogs: ['Date', 'Email', 'Intent', 'Confidence', 'Action', 'Reply'],
+  HumanReview: ['Date', 'Customer', 'Email', 'Reason', 'Status', 'Message', 'Review ID', 'Lead ID',
+    'Kind', 'Thread ID', 'Source Message ID', 'Subject', 'Draft', 'Decision At', 'Sent Message ID', 'Draft Revision', 'WhatsApp Alert', 'Telegram Alert'],
+  ProcessedReplies: ['Message ID', 'Thread ID', 'Processed Date'],
+  Settings: ['Key', 'Value'],
+  Suppressions: ['Email', 'Reason', 'Date']
+};
+
 function setupProject() {
-
-  const ss =
-    SpreadsheetApp.getActiveSpreadsheet();
-
-  const sheets = {
-
-    Leads: [
-      "Lead ID",
-      "Name",
-      "Email",
-      "Company",
-      "Status",
-      "Send",
-      "Thread ID",
-      "Last Sent",
-      "Follow-up Date",
-      "Follow-up Count"
-    ],
-
-    Templates: [
-      "Template ID",
-      "Template Name",
-      "Subject",
-      "Body"
-    ],
-
-    KnowledgeBase: [
-      "Category",
-      "Content"
-    ],
-
-    EmailLogs: [
-      "Log ID",
-      "Lead ID",
-      "Thread ID",
-      "Subject",
-      "Sent Date",
-      "Type"
-    ],
-
-    AILogs: [
-      "Date",
-      "Email",
-      "Intent",
-      "Confidence",
-      "Action",
-      "Reply"
-    ],
-
-    HumanReview: [
-      "Date",
-      "Customer",
-      "Email",
-      "Reason",
-      "Status",
-      "Message"
-    ],
-
-    ProcessedReplies: [
-      "Message ID",
-      "Thread ID",
-      "Processed Date"
-    ],
-
-    Settings: [
-      "Key",
-      "Value"
-    ]
-
-  };
-
-  Object.keys(sheets)
-    .forEach(name => {
-
-      let sheet =
-        ss.getSheetByName(name);
-
-      if (!sheet) {
-
-        sheet =
-          ss.insertSheet(name);
-
+  EmailPolicy.requireOwner();
+  return withEmailLock_(() => {
+    const workbook = SpreadsheetApp.getActiveSpreadsheet();
+    for (const [name, required] of Object.entries(EMAIL_SCHEMA)) {
+      let sheet = workbook.getSheetByName(name);
+      if (!sheet) sheet = workbook.insertSheet(name);
+      const existing = sheet.getLastColumn() ? SheetService.header(sheet) : [];
+      if (sheet.getLastRow() > 1 && !required.slice(0, name === 'Leads' ? 10 : name === 'HumanReview' ? 6 : name === 'KnowledgeBase' ? 2 : required.length)
+        .every(header => existing.includes(header))) throw new Error('Inspect existing headers in ' + name);
+      const missing = required.filter(header => !existing.includes(header));
+      if (missing.length) {
+        const necessary = existing.length + missing.length - sheet.getMaxColumns();
+        if (necessary > 0) sheet.insertColumnsAfter(sheet.getMaxColumns(), necessary);
+        sheet.getRange(1, existing.length + 1, 1, missing.length).setValues([missing]);
       }
-
-      if (sheet.getLastRow() > 0) {
-
-        return;
-
-      }
-
-      sheet
-        .getRange(
-          1,
-          1,
-          1,
-          sheets[name].length
-        )
-        .setValues([
-          sheets[name]
-        ]);
-
-    });
-
-  setupSettings();
-
-}
-
-function setupSettings() {
-
-  const sheet =
-    SheetService.getSheet(
-      CONFIG.SHEETS.SETTINGS
-    );
-
-  const defaults = [
-    ["AUTO_SEND_NEW_LEADS", false],
-    ["AI_ENABLED", false],
-    ["AUTO_REPLY_ENABLED", false],
-    ["GROQ_API_KEY", ""],
-    ["GROQ_MODEL", "llama-3.1-8b-instant"],
-    ["CONFIDENCE_THRESHOLD", 70],
-    ["TELEGRAM_ENABLED", false],
-    ["TELEGRAM_BOT_TOKEN", ""],
-    ["TELEGRAM_CHAT_ID", ""],
-    ["WHATSAPP_ENABLED", false],
-    ["TWILIO_SID", ""],
-    ["TWILIO_TOKEN", ""],
-    ["TWILIO_FROM", ""],
-    ["TWILIO_TO", ""]
-  ];
-
-  const data =
-    sheet.getDataRange()
-      .getValues();
-
-  const existingKeys =
-    new Set(
-      data.slice(1)
-        .map(row => row[0])
-        .filter(Boolean)
-    );
-
-  const missing =
-    defaults.filter(
-      row => !existingKeys.has(row[0])
-    );
-
-  if (missing.length === 0) {
-
-    return;
-
-  }
-
-  sheet
-    .getRange(
-      sheet.getLastRow() + 1,
-      1,
-      missing.length,
-      2
-    )
-    .setValues(missing);
-
+      const maxColumn = sheet.getLastColumn();
+      sheet.setFrozenRows(1);
+      sheet.getRange(1, 1, 1, maxColumn).setBackground('#E0EDEF').setFontColor('#213D4A')
+        .setFontWeight('bold').setVerticalAlignment('middle');
+      sheet.setRowHeight(1, 34);
+    }
+    const defaults = {
+      AUTO_SEND_NEW_LEADS: false, FOLLOWUP_QUEUE_ENABLED: false, AI_ENABLED: false,
+      WHATSAPP_ENABLED: false, TELEGRAM_ENABLED: false, TWILIO_CONTENT_SID: '',
+      AI_PROVIDER: 'groq',
+      AI_MODEL: SettingsService.get('GROQ_MODEL') || 'llama-3.1-8b-instant', CONFIDENCE_THRESHOLD: 70
+    };
+    const seen = new Set(SheetService.getRows(CONFIG.SHEETS.SETTINGS).map(row => row.Key));
+    for (const [Key, Value] of Object.entries(defaults)) {
+      if (!seen.has(Key)) SheetService.appendRecord(CONFIG.SHEETS.SETTINGS, {Key, Value});
+    }
+  });
 }
